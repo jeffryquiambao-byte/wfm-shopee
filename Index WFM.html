@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Workforce Management System</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        shopee: {
+                            primary: '#ee4d2d',
+                            dark: '#d0011b',
+                            light: '#f53d2d',
+                            bg: '#f5f5f5',
+                            border: '#e5e5e5'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f5f5f5; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .tab-active { border-bottom: 2px solid #ee4d2d; color: #ee4d2d; font-weight: 600; }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); display: flex;
+            align-items: center; justify-content: center; z-index: 50;
+        }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-gray-800">
+
+    <!-- Authentication Container -->
+    <div id="auth-view" class="fixed inset-0 z-50 flex items-center justify-center bg-shopee-bg">
+        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md border border-shopee-border">
+            <div class="flex justify-center mb-6">
+                <!-- Mock Shopee Logo -->
+                <div class="text-3xl font-bold text-shopee-primary flex items-center gap-2">
+                    <i data-lucide="shopping-bag"></i> Shopee WMS
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4">
+                <h2 class="text-xl font-semibold text-center mb-4">Sign In</h2>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Shopee Email</label>
+                    <input type="email" id="login-email" required pattern=".*@shopee\.com$" placeholder="user@shopee.com" class="w-full p-2 border rounded focus:ring-shopee-primary focus:border-shopee-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full p-2 border rounded focus:ring-shopee-primary focus:border-shopee-primary outline-none">
+                </div>
+                <button type="submit" class="w-full bg-shopee-primary hover:bg-shopee-dark text-white font-medium py-2 rounded transition">Sign In</button>
+                <div class="flex justify-between text-sm mt-2">
+                    <a href="#" id="show-signup" class="text-shopee-primary hover:underline">Create Account</a>
+                    <a href="#" id="show-reset" class="text-blue-500 hover:underline">Forgot Password?</a>
+                </div>
+            </form>
+
+            <!-- Signup Form (Hidden initially) -->
+            <form id="signup-form" class="space-y-4 hidden">
+                <h2 class="text-xl font-semibold text-center mb-4">Register</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Full Name</label>
+                        <input type="text" id="signup-name" required class="w-full p-2 text-sm border rounded outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Shopee Email</label>
+                        <input type="email" id="signup-email" required pattern=".*@shopee\.com$" class="w-full p-2 text-sm border rounded outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Date of Birth</label>
+                        <input type="date" id="signup-dob" required class="w-full p-2 text-sm border rounded outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Contact Number</label>
+                        <input type="tel" id="signup-contact" required class="w-full p-2 text-sm border rounded outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1">Address</label>
+                    <input type="text" id="signup-address" required class="w-full p-2 text-sm border rounded outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Role</label>
+                        <select id="signup-role" class="w-full p-2 text-sm border rounded outline-none">
+                            <option value="RTA">RTA</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Password</label>
+                        <input type="password" id="signup-password" required class="w-full p-2 text-sm border rounded outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-shopee-primary hover:bg-shopee-dark text-white font-medium py-2 rounded transition">Sign Up</button>
+                <div class="text-center text-sm mt-2">
+                    <a href="#" id="show-login-from-signup" class="text-gray-500 hover:underline">Back to Login</a>
+                </div>
+            </form>
+
+            <!-- Reset Password Form (Hidden initially) -->
+            <form id="reset-form" class="space-y-4 hidden">
+                <h2 class="text-xl font-semibold text-center mb-4">Reset Password</h2>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Shopee Email</label>
+                    <input type="email" id="reset-email" required class="w-full p-2 border rounded outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">New Password</label>
+                    <input type="password" id="reset-new-password" required class="w-full p-2 border rounded outline-none">
+                </div>
+                <button type="submit" class="w-full bg-shopee-primary hover:bg-shopee-dark text-white font-medium py-2 rounded transition">Set New Password</button>
+                <div class="text-center text-sm mt-2">
+                    <a href="#" id="show-login-from-reset" class="text-gray-500 hover:underline">Back to Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application View (Hidden until authenticated) -->
+    <div id="app-view" class="w-full h-full flex hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-shopee-border flex flex-col shadow-sm">
+            <div class="h-16 flex items-center justify-center border-b border-shopee-border">
+                <div class="text-2xl font-bold text-shopee-primary flex items-center gap-2">
+                    <i data-lucide="shopping-bag"></i> WMS
+                </div>
+            </div>
+            
+            <!-- User Profile Snippet -->
+            <div class="p-4 border-b border-shopee-border bg-orange-50">
+                <p id="nav-user-name" class="font-semibold text-sm truncate">User Name</p>
+                <p id="nav-user-role" class="text-xs text-gray-500">Role</p>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto hide-scroll">
+                <button data-target="dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-shopee-primary font-medium bg-orange-50">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+                </button>
+                <button data-target="leave-request" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-gray-600 transition">
+                    <i data-lucide="calendar-off" class="w-5 h-5"></i> Leave Request
+                </button>
+                <button data-target="rta-schedule" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-gray-600 transition">
+                    <i data-lucide="calendar-clock" class="w-5 h-5"></i> RTA Schedule
+                </button>
+                <button data-target="ot-tracker" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-gray-600 transition">
+                    <i data-lucide="clock" class="w-5 h-5"></i> OT Tracker
+                </button>
+                <button data-target="workforce-roster" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-gray-600 transition">
+                    <i data-lucide="users" class="w-5 h-5"></i> Workforce Roster
+                </button>
+                <button data-target="admin-portal" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded text-left hover:bg-orange-50 text-gray-600 transition">
+                    <i data-lucide="shield" class="w-5 h-5"></i> Admin Portal
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-shopee-border">
+                <button id="logout-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition border border-red-200">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-full bg-shopee-bg overflow-hidden relative">
+            
+            <!-- Global Message Toast -->
+            <div id="toast-container" class="absolute top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+            <!-- Views -->
+            <div class="flex-1 overflow-y-auto p-6" id="view-container">
+                
+                <!-- View: Dashboard -->
+                <section id="view-dashboard" class="view-section">
+                    <div class="bg-shopee-primary rounded-xl shadow-lg p-6 text-white mb-6 bg-cover bg-center" style="background-image: linear-gradient(to right, #ee4d2d, #f53d2d);">
+                        <h1 class="text-3xl font-bold mb-2">Welcome to Shopee WMS</h1>
+                        <p class="opacity-90">Manage your schedules, leaves, and tracking all in one place.</p>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-shopee-border p-6">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><i data-lucide="megaphone" class="text-shopee-primary"></i> Top Announcements</h2>
+                        <ul id="announcement-list" class="space-y-3">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- View: Leave Request -->
+                <section id="view-leave-request" class="view-section hidden">
+                    <h2 class="text-2xl font-bold mb-4">Leave Management</h2>
+                    
+                    <!-- Sub-tabs -->
+                    <div class="flex border-b border-shopee-border mb-4">
+                        <button class="leave-tab-btn px-4 py-2 tab-active" data-tab="file-leave">File Leave</button>
+                        <button class="leave-tab-btn px-4 py-2 text-gray-600 hover:text-shopee-primary" data-tab="my-leaves">My Leaves</button>
+                        <button class="leave-tab-btn px-4 py-2 text-gray-600 hover:text-shopee-primary" data-tab="balances">Balances</button>
+                        <button class="leave-tab-btn px-4 py-2 text-gray-600 hover:text-shopee-primary hidden admin-only-tab" data-tab="pending-approval">Pending (Admin)</button>
+                    </div>
+
+                    <!-- Sub-view: File Leave -->
+                    <div id="leave-tab-file-leave" class="leave-tab-content bg-white p-6 rounded-lg shadow-sm border border-shopee-border max-w-2xl">
+                        <form id="form-file-leave" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Leave Type</label>
+                                <select id="leave-type" required class="w-full p-2 border rounded outline-none focus:border-shopee-primary">
+                                    <option value="" disabled selected>Select category</option>
+                                    <option value="Vacation Leave">Vacation Leave (VL)</option>
+                                    <option value="Emergency Leave">Emergency Leave (EL)</option>
+                                    <option value="Sick Leave">Sick Leave (SL)</option>
+                                    <option value="Family Care Leave">Family Care Leave (FCL)</option>
+                                    <option value="Solo Parent Leave">Solo Parent Leave</option>
+                                    <option value="Compassionate Leave">Compassionate Leave</option>
+                                    <option value="Off in Lieu">Off in Lieu</option>
+                                    <option value="No Pay Leave">No Pay Leave</option>
+                                </select>
+                                <p id="vl-notice" class="text-xs text-shopee-dark mt-1 hidden">* VL requires 14 days advance filing.</p>
+                            </div>
+                            
+                            <div id="el-credit-deduction" class="hidden">
+                                <label class="block text-sm font-medium mb-1">Deduct From Credit</label>
+                                <select id="el-deduct-source" class="w-full p-2 border rounded outline-none">
+                                    <option value="vl">Vacation Leave</option>
+                                    <option value="sl">Sick Leave</option>
+                                    <option value="nopay">No Pay</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Start Date</label>
+                                    <input type="date" id="leave-start" required class="w-full p-2 border rounded outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">End Date</label>
+                                    <input type="date" id="leave-end" required class="w-full p-2 border rounded outline-none">
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium mb-1">Total Duration (Days)</label>
+                                    <input type="number" id="leave-duration" readonly class="w-full p-2 border rounded bg-gray-50 outline-none">
+                                </div>
+                                <div id="half-day-container" class="flex-1 flex items-end pb-2 hidden">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="leave-half-day" class="rounded text-shopee-primary focus:ring-shopee-primary">
+                                        <span class="text-sm font-medium">Half Day (0.5)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Designated Cover RTA</label>
+                                <select id="leave-cover" required class="w-full p-2 border rounded outline-none focus:border-shopee-primary">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Reason for Leave</label>
+                                <textarea id="leave-reason" required rows="3" class="w-full p-2 border rounded outline-none focus:border-shopee-primary"></textarea>
+                            </div>
+
+                            <button type="submit" id="btn-submit-leave" class="w-full bg-shopee-primary hover:bg-shopee-dark text-white font-medium py-2 rounded transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Submit Leave Request
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Sub-view: My Leaves -->
+                    <div id="leave-tab-my-leaves" class="leave-tab-content hidden bg-white rounded-lg shadow-sm border border-shopee-border overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 border-b border-gray-200">
+                                        <th class="p-3 font-semibold">Req Timestamp</th>
+                                        <th class="p-3 font-semibold">Leave Type</th>
+                                        <th class="p-3 font-semibold">Dates</th>
+                                        <th class="p-3 font-semibold">Days</th>
+                                        <th class="p-3 font-semibold">Status</th>
+                                        <th class="p-3 font-semibold">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-leaves-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sub-view: Balances -->
+                    <div id="leave-tab-balances" class="leave-tab-content hidden space-y-4">
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-shopee-border text-center">
+                                <h3 class="text-gray-500 text-sm font-medium">Vacation Leave (VL)</h3>
+                                <div class="text-2xl font-bold text-shopee-primary mt-1" id="bal-vl">--</div>
+                                <div class="text-xs text-gray-400 mt-1">Carried Over: <span id="bal-vl-carry">--</span></div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-shopee-border text-center">
+                                <h3 class="text-gray-500 text-sm font-medium">Sick Leave (SL)</h3>
+                                <div class="text-2xl font-bold text-shopee-primary mt-1" id="bal-sl">--</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-shopee-border text-center">
+                                <h3 class="text-gray-500 text-sm font-medium">Family Care (FCL)</h3>
+                                <div class="text-2xl font-bold text-shopee-primary mt-1" id="bal-fcl">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Balance Controls -->
+                        <div class="admin-only-section hidden bg-white p-4 rounded-lg shadow-sm border border-shopee-border">
+                            <h3 class="font-semibold mb-3">Admin: Balance Management</h3>
+                            <div class="flex gap-2">
+                                <button onclick="downloadBalancesTemplate()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium flex items-center gap-1">
+                                    <i data-lucide="download" class="w-4 h-4"></i> Template
+                                </button>
+                                <label class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium flex items-center gap-1 cursor-pointer">
+                                    <i data-lucide="upload" class="w-4 h-4"></i> Import
+                                    <input type="file" id="import-balances" accept=".csv, .xlsx" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-view: Pending (Admin) -->
+                    <div id="leave-tab-pending-approval" class="leave-tab-content hidden bg-white rounded-lg shadow-sm border border-shopee-border overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 border-b border-gray-200">
+                                        <th class="p-3 font-semibold">Requestor</th>
+                                        <th class="p-3 font-semibold">Type</th>
+                                        <th class="p-3 font-semibold">Dates</th>
+                                        <th class="p-3 font-semibold">Days</th>
+                                        <th class="p-3 font-semibold">Cover</th>
+                                        <th class="p-3 font-semibold text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-leaves-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: RTA Schedule -->
+                <section id="view-rta-schedule" class="view-section hidden h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">RTA Schedule</h2>
+                        <div class="flex items-center gap-4">
+                            <button id="btn-prev-week" class="p-1 hover:bg-gray-200 rounded"><i data-lucide="chevron-left"></i></button>
+                            <span id="schedule-week-label" class="font-medium">Week of ...</span>
+                            <button id="btn-next-week" class="p-1 hover:bg-gray-200 rounded"><i data-lucide="chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Admin Shift Controls -->
+                    <div class="admin-only-section hidden bg-white p-3 rounded-lg shadow-sm border border-shopee-border mb-4 flex gap-4 items-end text-sm">
+                        <div>
+                            <label class="block font-medium mb-1 text-xs">Bulk Apply Mode</label>
+                            <select id="bulk-shift-mode" class="p-1.5 border rounded">
+                                <option value="single">Single Shiftline (Whole Wk)</option>
+                                <option value="multi" disabled>Multi Shiftline (TBD)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1 text-xs">Shift String</label>
+                            <input type="text" id="bulk-shift-string" placeholder="07:00-16:00" class="p-1.5 border rounded w-32">
+                        </div>
+                        <button id="btn-apply-bulk-shift" class="bg-shopee-primary text-white px-4 py-1.5 rounded hover:bg-shopee-dark">Apply to Selected</button>
+                    </div>
+
+                    <div class="flex-1 bg-white rounded-lg shadow-sm border border-shopee-border overflow-hidden flex flex-col">
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-center border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200" id="schedule-header">
+                                        <th class="p-2 border-r text-left min-w-[200px]">
+                                            <div class="flex items-center gap-2">
+                                                <input type="checkbox" id="selectAllRta" class="admin-only-section hidden"> RTA Name
+                                            </div>
+                                        </th>
+                                        <!-- Days injected here -->
+                                    </tr>
+                                </thead>
+                                <tbody id="schedule-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: OT Tracker -->
+                <section id="view-ot-tracker" class="view-section hidden">
+                    <h2 class="text-2xl font-bold mb-4">OT Tracker & Export</h2>
+                    
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-shopee-border mb-4 flex flex-wrap gap-4 items-end">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Cut-off Start</label>
+                            <input type="date" id="ot-cutoff-start" class="p-2 border rounded outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Cut-off End</label>
+                            <input type="date" id="ot-cutoff-end" class="p-2 border rounded outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Payout Date</label>
+                            <input type="date" id="ot-payout-date" class="p-2 border rounded outline-none text-sm">
+                        </div>
+                        <button id="btn-generate-ot" class="bg-shopee-primary text-white px-4 py-2 rounded hover:bg-shopee-dark text-sm font-medium">Generate Report</button>
+                        <button id="btn-export-ot" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium flex items-center gap-2 ml-auto">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export XLSX
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-shopee-border overflow-hidden">
+                        <div class="overflow-x-auto max-h-[60vh]">
+                            <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                                <thead class="bg-gray-100 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <!-- Headers injected dynamically based on matrix requirements -->
+                                        <th class="p-2 border">Location</th>
+                                        <th class="p-2 border">Email</th>
+                                        <th class="p-2 border">Date</th>
+                                        <th class="p-2 border">Reg OT</th>
+                                        <th class="p-2 border">ND</th>
+                                        <th class="p-2 border">Reg OT w/ ND</th>
+                                        <th class="p-2 border">RD (1st 8)</th>
+                                        <th class="p-2 border">RD (>8)</th>
+                                        <th class="p-2 border">Legal Hol (1st 8)</th>
+                                        <!-- Note: Full headers generated in JS -->
+                                        <th class="p-2 border text-gray-500 italic">... Full columns exported ...</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ot-tbody">
+                                    <tr><td colspan="10" class="text-center p-4 text-gray-500">Select dates and generate report.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Workforce Roster -->
+                <section id="view-workforce-roster" class="view-section hidden">
+                    <h2 class="text-2xl font-bold mb-4">Workforce Roster</h2>
+                    
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-shopee-border mb-4">
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-3 text-gray-400 w-5 h-5"></i>
+                            <input type="text" id="roster-search" placeholder="Search by name, email, or role..." class="w-full pl-10 p-2 border rounded outline-none focus:border-shopee-primary">
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-shopee-border overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200">
+                                        <th class="p-3 font-semibold">Name</th>
+                                        <th class="p-3 font-semibold">Email</th>
+                                        <th class="p-3 font-semibold">Role</th>
+                                        <th class="p-3 font-semibold">Contact</th>
+                                        <th class="p-3 font-semibold">Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="roster-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Admin Portal -->
+                <section id="view-admin-portal" class="view-section hidden">
+                    <h2 class="text-2xl font-bold mb-4">Admin Portal</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Announcements Editor -->
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-shopee-border">
+                            <h3 class="text-lg font-semibold mb-4 border-b pb-2">Edit Announcements</h3>
+                            <textarea id="admin-announcement-input" rows="4" placeholder="Enter new announcement..." class="w-full p-2 border rounded mb-2 outline-none focus:border-shopee-primary text-sm"></textarea>
+                            <button id="btn-add-announcement" class="bg-shopee-primary text-white px-4 py-2 rounded text-sm hover:bg-shopee-dark">Post Announcement</button>
+                            
+                            <ul id="admin-announcement-list" class="mt-4 space-y-2 text-sm border-t pt-4">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+
+                        <!-- System Settings -->
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-shopee-border">
+                            <h3 class="text-lg font-semibold mb-4 border-b pb-2">Security Settings</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Update Admin PIN</label>
+                                    <input type="password" id="admin-old-pin" placeholder="Old PIN" class="w-full p-2 border rounded mb-2 outline-none text-sm">
+                                    <input type="password" id="admin-new-pin" placeholder="New 4-digit PIN" class="w-full p-2 border rounded mb-2 outline-none text-sm">
+                                    <button id="btn-update-pin" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-900">Update PIN</button>
+                                </div>
+                                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded text-sm">
+                                    <p class="font-semibold text-red-700">Danger Zone</p>
+                                    <button id="btn-reset-db" class="mt-2 bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700">Wipe & Reset Database</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Admin PIN Modal -->
+    <div id="pin-modal" class="modal-backdrop hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-80">
+            <h3 class="text-lg font-semibold mb-2 text-center">Admin Access Required</h3>
+            <p class="text-sm text-gray-500 mb-4 text-center">Please enter the 4-digit Admin PIN.</p>
+            <input type="password" id="pin-input" maxlength="4" class="w-full p-3 border rounded text-center text-2xl tracking-[1em] focus:border-shopee-primary outline-none mb-4">
+            <div class="flex gap-2">
+                <button id="btn-cancel-pin" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300">Cancel</button>
+                <button id="btn-submit-pin" class="flex-1 bg-shopee-primary text-white py-2 rounded hover:bg-shopee-dark">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shift Override Modal -->
+    <div id="override-modal" class="modal-backdrop hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 class="text-lg font-semibold mb-1">Manual Shift Override</h3>
+            <p id="override-subtitle" class="text-sm text-gray-500 mb-4">Editing shift for ...</p>
+            
+            <div class="space-y-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="override-is-rd" class="rounded text-shopee-primary">
+                    <span class="text-sm font-medium">Set as Rest Day (RD)</span>
+                </label>
+                
+                <div id="override-time-inputs" class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Start Time</label>
+                        <input type="time" id="override-start" class="w-full p-2 border rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">End Time</label>
+                        <input type="time" id="override-end" class="w-full p-2 border rounded text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium mb-1">Reason</label>
+                    <select id="override-reason" class="w-full p-2 border rounded text-sm outline-none">
+                        <option value="RDOT">RDOT (Rest Day Overtime)</option>
+                        <option value="Regular OT">Regular OT (Pre/Post Shift)</option>
+                        <option value="Swap Schedule">Swap Schedule</option>
+                        <option value="Slide-shift">Slide-shift</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button id="btn-cancel-override" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300">Cancel</button>
+                <button id="btn-save-override" class="flex-1 bg-shopee-primary text-white py-2 rounded hover:bg-shopee-dark">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        /* --- Configuration & Turso Client --- */
+        const DB_URL = "https://workforce-management-jepyter02.aws-ap-northeast-1.turso.io";
+        const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTIwNjg2NzQsImlkIjoiMDFhMTNmOWQtOTYwMS03MzM1LTg4MTItOGY5Nzc5YTdkM2UyIiwia2lkIjoieXJyX2hwTW42bjk0bnZMd1NhdzFVVzlGa194aUtDU2ViNzZETE9iMzVlVSIsInR5cCI6IjU4YTk2MjQ2LTViMWUtNDY2Zi05Njg5LWYwMjA3N2UwYjlmOSJ9.q5e5dREfDLlsiythlCilIXsk3CMksbnR4DAfiIE_6BZMjQU8IvAik2xGk-1i5gohbAWwyhwE3nDt6rKupwTZAQ";
+
+        // Global State
+        let AppState = {
+            user: null,
+            isAdminAuthenticated: false,
+            currentWeekStart: new Date(),
+            users: [],
+            leaves: [],
+            schedules: []
+        };
+
+        // UI Toast Utility
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-gray-800';
+            toast.className = `${bg} text-white px-4 py-2 rounded shadow-lg transform transition-all duration-300 translate-y-[-100%] opacity-0`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Turso Execution Wrapper
+        async function executeSql(sql, args = []) {
+            try {
+                const response = await fetch(`${DB_URL}/v2/pipeline`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DB_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        requests: [{ type: "execute", stmt: { sql, args } }]
+                    })
+                });
+                
+                if (!response.ok) throw new Error('DB Request Failed');
+                const data = await response.json();
+                
+                // Parse Turso response format
+                const result = data.results[0].response.result;
+                if (!result.cols) return []; // Insert/Update
+
+                // Map columns to values to return array of objects
+                return result.rows.map(row => {
+                    let obj = {};
+                    result.cols.forEach((col, idx) => {
+                        obj[col.name] = row[idx].value;
+                    });
+                    return obj;
+                });
+            } catch (error) {
+                console.error("Turso Error:", error);
+                // Fallback to LocalStorage for critical state if needed, though for this 
+                // implementation we rely on Turso structure.
+                throw error;
+            }
+        }
+
+        /* --- STREAMING_CHUNK:Database Initialization & Schema --- */
+        async function initDatabase() {
+            const tables = [
+                `CREATE TABLE IF NOT EXISTS users (
+                    email TEXT PRIMARY KEY, name TEXT, dob TEXT, contact TEXT, address TEXT, role TEXT, password TEXT
+                )`,
+                `CREATE TABLE IF NOT EXISTS announcements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS leaves (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, type TEXT, start_date TEXT, end_date TEXT, 
+                    days REAL, cover TEXT, reason TEXT, status TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    deducted_carry REAL DEFAULT 0, deducted_current REAL DEFAULT 0
+                )`,
+                `CREATE TABLE IF NOT EXISTS leave_balances (
+                    email TEXT PRIMARY KEY, vl_current REAL DEFAULT 15, vl_carry REAL DEFAULT 0, 
+                    sl REAL DEFAULT 15, fcl REAL DEFAULT 3
+                )`,
+                `CREATE TABLE IF NOT EXISTS schedules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, date TEXT, start_time TEXT, end_time TEXT, 
+                    is_rd INTEGER, override_reason TEXT, type TEXT, UNIQUE(email, date)
+                )`,
+                `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`
+            ];
+
+            for (let q of tables) {
+                await executeSql(q);
+            }
+
+            // Init Admin PIN if not exists
+            const pinCheck = await executeSql("SELECT value FROM settings WHERE key = 'admin_pin'");
+            if (pinCheck.length === 0) {
+                await executeSql("INSERT INTO settings (key, value) VALUES ('admin_pin', '2626')");
+            }
+        }
+
+        /* --- STREAMING_CHUNK:Authentication Logic --- */
+        const authView = document.getElementById('auth-view');
+        const appView = document.getElementById('app-view');
+        
+        // Toggle Auth Forms
+        document.getElementById('show-signup').onclick = () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('signup-form').classList.remove('hidden'); };
+        document.getElementById('show-login-from-signup').onclick = () => { document.getElementById('signup-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); };
+        document.getElementById('show-reset').onclick = () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('reset-form').classList.remove('hidden'); };
+        document.getElementById('show-login-from-reset').onclick = () => { document.getElementById('reset-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); };
+
+        document.getElementById('signup-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const user = {
+                name: document.getElementById('signup-name').value,
+                email: email,
+                dob: document.getElementById('signup-dob').value,
+                contact: document.getElementById('signup-contact').value,
+                address: document.getElementById('signup-address').value,
+                role: document.getElementById('signup-role').value,
+                password: document.getElementById('signup-password').value // Note: Plain text for demo, use hashing in prod
+            };
+
+            try {
+                // Check if exists
+                const existing = await executeSql("SELECT email FROM users WHERE email = ?", [{type: "text", value: email}]);
+                if (existing.length > 0) return showToast("Email already registered", "error");
+
+                await executeSql(
+                    "INSERT INTO users (email, name, dob, contact, address, role, password) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        {type: "text", value: user.email}, {type: "text", value: user.name},
+                        {type: "text", value: user.dob}, {type: "text", value: user.contact},
+                        {type: "text", value: user.address}, {type: "text", value: user.role},
+                        {type: "text", value: user.password}
+                    ]
+                );
+                
+                // Initialize balances
+                await executeSql("INSERT INTO leave_balances (email) VALUES (?)", [{type: "text", value: user.email}]);
+
+                showToast("Registration successful! Please login.", "success");
+                document.getElementById('show-login-from-signup').click();
+            } catch(e) { showToast("Error registering", "error"); console.error(e); }
+        };
+
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+
+            try {
+                const res = await executeSql("SELECT * FROM users WHERE email = ? AND password = ?", [{type: "text", value: email}, {type: "text", value: pass}]);
+                if (res.length > 0) {
+                    AppState.user = res[0];
+                    postLoginSetup();
+                } else {
+                    showToast("Invalid credentials", "error");
+                }
+            } catch(e) { showToast("Login failed", "error"); }
+        };
+
+        document.getElementById('logout-btn').onclick = () => {
+            AppState.user = null;
+            AppState.isAdminAuthenticated = false;
+            appView.classList.add('hidden');
+            authView.classList.remove('hidden');
+            document.getElementById('login-password').value = '';
+        };
+
+        document.getElementById('reset-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reset-email').value;
+            const newPass = document.getElementById('reset-new-password').value;
+            try {
+                const res = await executeSql("SELECT email FROM users WHERE email = ?", [{type: "text", value: email}]);
+                if (res.length > 0) {
+                    await executeSql("UPDATE users SET password = ? WHERE email = ?", [{type: "text", value: newPass}, {type: "text", value: email}]);
+                    showToast("Password reset successfully. Check simulated email link.", "success");
+                    console.log(`[SIMULATED EMAIL] To: ${email} | Subject: Password Reset | Body: Your password has been changed to: ${newPass}`);
+                    document.getElementById('show-login-from-reset').click();
+                } else { showToast("Email not found", "error"); }
+            } catch(e) { showToast("Error resetting password", "error"); }
+        };
+
+        /* --- STREAMING_CHUNK:Navigation & UI State --- */
+        function postLoginSetup() {
+            authView.classList.add('hidden');
+            appView.classList.remove('hidden');
+            document.getElementById('nav-user-name').textContent = AppState.user.name;
+            document.getElementById('nav-user-role').textContent = AppState.user.role;
+            
+            // UI Adjustments based on role
+            document.querySelectorAll('.admin-only-section, .admin-only-tab').forEach(el => {
+                if (AppState.user.role !== 'Admin') el.classList.add('hidden');
+                else el.classList.remove('hidden');
+            });
+
+            loadDashboard();
+            switchView('dashboard');
+        }
+
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget.dataset.target;
+                
+                if (target === 'admin-portal' && !AppState.isAdminAuthenticated && AppState.user.role === 'Admin') {
+                    showPinModal();
+                    return;
+                }
+                
+                if (target === 'admin-portal' && AppState.user.role !== 'Admin') {
+                    return showToast("Admin access denied", "error");
+                }
+
+                switchView(target);
+                
+                // Load specific data
+                if (target === 'workforce-roster') loadRoster();
+                if (target === 'leave-request') loadLeaveData();
+                if (target === 'rta-schedule') renderScheduleGrid();
+            });
+        });
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-50', 'text-shopee-primary', 'font-medium');
+                btn.classList.add('text-gray-600');
+                if(btn.dataset.target === viewId) {
+                    btn.classList.add('bg-orange-50', 'text-shopee-primary', 'font-medium');
+                    btn.classList.remove('text-gray-600');
+                }
+            });
+        }
+
+        /* --- STREAMING_CHUNK:Admin PIN Logic --- */
+        const pinModal = document.getElementById('pin-modal');
+        function showPinModal() { pinModal.classList.remove('hidden'); document.getElementById('pin-input').value = ''; document.getElementById('pin-input').focus(); }
+        function hidePinModal() { pinModal.classList.add('hidden'); }
+        
+        document.getElementById('btn-cancel-pin').onclick = hidePinModal;
+        document.getElementById('btn-submit-pin').onclick = async () => {
+            const input = document.getElementById('pin-input').value;
+            try {
+                const res = await executeSql("SELECT value FROM settings WHERE key = 'admin_pin'");
+                if(res.length > 0 && res[0].value === input) {
+                    AppState.isAdminAuthenticated = true;
+                    hidePinModal();
+                    switchView('admin-portal');
+                } else {
+                    showToast("Incorrect PIN", "error");
+                    document.getElementById('pin-input').value = '';
+                }
+            } catch(e) { console.error(e); }
+        };
+
+        /* --- STREAMING_CHUNK:Dashboard & Roster --- */
+        async function loadDashboard() {
+            try {
+                const anns = await executeSql("SELECT * FROM announcements ORDER BY id DESC LIMIT 5");
+                const list = document.getElementById('announcement-list');
+                const adminList = document.getElementById('admin-announcement-list');
+                list.innerHTML = ''; adminList.innerHTML = '';
+                
+                anns.forEach(a => {
+                    list.innerHTML += `<li class="p-3 bg-gray-50 rounded border-l-4 border-shopee-primary text-sm">${a.content}</li>`;
+                    adminList.innerHTML += `<li class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">${a.content} <button onclick="deleteAnnouncement(${a.id})" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button></li>`;
+                });
+                lucide.createIcons();
+            } catch(e) { console.error("Error loading dashboard", e); }
+        }
+
+        document.getElementById('btn-add-announcement').onclick = async () => {
+            const input = document.getElementById('admin-announcement-input');
+            if(!input.value.trim()) return;
+            try {
+                await executeSql("INSERT INTO announcements (content) VALUES (?)", [{type: "text", value: input.value.trim()}]);
+                input.value = '';
+                showToast("Announcement posted", "success");
+                loadDashboard();
+            } catch(e) { showToast("Error posting", "error"); }
+        };
+        
+        window.deleteAnnouncement = async (id) => {
+            await executeSql("DELETE FROM announcements WHERE id = ?", [{type: "integer", value: id}]);
+            loadDashboard();
+        }
+
+        async function loadRoster() {
+            try {
+                const users = await executeSql("SELECT name, email, role, contact, address FROM users ORDER BY name");
+                AppState.users = users; // Cache
+                renderRoster(users);
+                
+                // Populate Leave Cover Dropdown
+                const coverSelect = document.getElementById('leave-cover');
+                coverSelect.innerHTML = '<option value="" disabled selected>Select RTA to cover</option>';
+                users.filter(u => u.email !== AppState.user.email && u.role === 'RTA').forEach(u => {
+                    coverSelect.innerHTML += `<option value="${u.email}">${u.name}</option>`;
+                });
+            } catch(e) {}
+        }
+
+        function renderRoster(users) {
+            const tbody = document.getElementById('roster-tbody');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="p-3 font-medium text-gray-800">${u.name}</td>
+                        <td class="p-3 text-gray-600">${u.email}</td>
+                        <td class="p-3"><span class="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium ${u.role==='Admin'?'text-shopee-primary':''}">${u.role}</span></td>
+                        <td class="p-3 text-gray-600">${u.contact}</td>
+                        <td class="p-3 text-gray-600 truncate max-w-[200px]" title="${u.address}">${u.address}</td>
+                    </tr>`;
+            });
+        }
+        
+        document.getElementById('roster-search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = AppState.users.filter(u => 
+                u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term) || u.role.toLowerCase().includes(term)
+            );
+            renderRoster(filtered);
+        });
+
+        /* --- STREAMING_CHUNK:Leave Management Logic --- */
+        // Sub-tabs
+        document.querySelectorAll('.leave-tab-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                document.querySelectorAll('.leave-tab-btn').forEach(b => {b.classList.remove('tab-active'); b.classList.add('text-gray-600');});
+                e.currentTarget.classList.add('tab-active'); e.currentTarget.classList.remove('text-gray-600');
+                document.querySelectorAll('.leave-tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(`leave-tab-${e.currentTarget.dataset.tab}`).classList.remove('hidden');
+                if(e.currentTarget.dataset.tab === 'balances') fetchMyBalances();
+            }
+        });
+
+        const leaveStart = document.getElementById('leave-start');
+        const leaveEnd = document.getElementById('leave-end');
+        const leaveType = document.getElementById('leave-type');
+        const leaveHalfDay = document.getElementById('leave-half-day');
+        
+        function updateLeaveDuration() {
+            if(!leaveStart.value || !leaveEnd.value) return;
+            const start = new Date(leaveStart.value);
+            const end = new Date(leaveEnd.value);
+            if (end < start) { document.getElementById('leave-duration').value = 0; return; }
+            
+            let days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            
+            if (days === 1) {
+                document.getElementById('half-day-container').classList.remove('hidden');
+                if(leaveHalfDay.checked) days = 0.5;
+            } else {
+                document.getElementById('half-day-container').classList.add('hidden');
+                leaveHalfDay.checked = false;
+            }
+            document.getElementById('leave-duration').value = days;
+        }
+
+        leaveStart.onchange = updateLeaveDuration;
+        leaveEnd.onchange = updateLeaveDuration;
+        leaveHalfDay.onchange = updateLeaveDuration;
+
+        leaveType.onchange = (e) => {
+            const val = e.target.value;
+            const vlNotice = document.getElementById('vl-notice');
+            const elCredit = document.getElementById('el-credit-deduction');
+            
+            vlNotice.classList.add('hidden');
+            elCredit.classList.add('hidden');
+            
+            // VL Rule: 14 days in advance
+            const minDate = new Date();
+            if (val === 'Vacation Leave') {
+                vlNotice.classList.remove('hidden');
+                minDate.setDate(minDate.getDate() + 14);
+            }
+            const minStr = minDate.toISOString().split('T')[0];
+            leaveStart.min = minStr;
+            if(leaveStart.value && leaveStart.value < minStr) leaveStart.value = minStr;
+            
+            if (val === 'Emergency Leave') {
+                elCredit.classList.remove('hidden');
+                leaveStart.removeAttribute('min');
+            }
+            updateLeaveDuration();
+        };
+
+        // File Leave Submit
+        document.getElementById('form-file-leave').onsubmit = async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('leave-type').value;
+            const start = document.getElementById('leave-start').value;
+            const end = document.getElementById('leave-end').value;
+            const days = parseFloat(document.getElementById('leave-duration').value);
+            const cover = document.getElementById('leave-cover').value;
+            const reason = document.getElementById('leave-reason').value;
+            
+            if(days <= 0) return showToast("Invalid date range", "error");
+
+            // Deduct logic simulation before sending to DB to check if enough credits
+            let balRes = await executeSql("SELECT * FROM leave_balances WHERE email = ?", [{type: "text", value: AppState.user.email}]);
+            if(balRes.length === 0) return showToast("Balance not found", "error");
+            let bal = balRes[0];
+            
+            let deductType = type;
+            if(type === 'Emergency Leave') deductType = document.getElementById('el-deduct-source').value === 'vl' ? 'Vacation Leave' : (document.getElementById('el-deduct-source').value === 'sl' ? 'Sick Leave' : 'No Pay');
+
+            let carryDeduct = 0;
+            let currentDeduct = 0;
+
+            if (deductType === 'Vacation Leave') {
+                if (bal.vl_carry + bal.vl_current < days) return showToast("Insufficient VL Credits", "error");
+                // Priority deduction
+                if (bal.vl_carry >= days) {
+                    carryDeduct = days;
+                } else {
+                    carryDeduct = bal.vl_carry;
+                    currentDeduct = days - bal.vl_carry;
+                }
+            } else if (deductType === 'Sick Leave') {
+                if (bal.sl < days) return showToast("Insufficient SL Credits", "error");
+                currentDeduct = days;
+            } else if (type === 'Family Care Leave') {
+                if (bal.fcl < days) return showToast("Insufficient FCL Credits", "error");
+                currentDeduct = days;
+            }
+
+            try {
+                // Insert leave request
+                await executeSql(
+                    `INSERT INTO leaves (email, type, start_date, end_date, days, cover, reason, status, deducted_carry, deducted_current) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+                    [
+                        {type: "text", value: AppState.user.email}, {type: "text", value: type},
+                        {type: "text", value: start}, {type: "text", value: end}, {type: "real", value: days},
+                        {type: "text", value: cover}, {type: "text", value: reason},
+                        {type: "real", value: carryDeduct}, {type: "real", value: currentDeduct}
+                    ]
+                );
+
+                // Deduct balances immediately (optimistic)
+                if (deductType === 'Vacation Leave') {
+                    await executeSql("UPDATE leave_balances SET vl_carry = vl_carry - ?, vl_current = vl_current - ? WHERE email = ?", 
+                        [{type: "real", value: carryDeduct}, {type: "real", value: currentDeduct}, {type: "text", value: AppState.user.email}]);
+                } else if (deductType === 'Sick Leave') {
+                    await executeSql("UPDATE leave_balances SET sl = sl - ? WHERE email = ?", [{type: "real", value: currentDeduct}, {type: "text", value: AppState.user.email}]);
+                } else if (type === 'Family Care Leave') {
+                    await executeSql("UPDATE leave_balances SET fcl = fcl - ? WHERE email = ?", [{type: "real", value: currentDeduct}, {type: "text", value: AppState.user.email}]);
+                }
+
+                showToast("Leave filed successfully", "success");
+                
+                // Construct Email Payload
+                const emailSubject = `${type} ${start}${start !== end ? ' to '+end : ''}`;
+                const emailBody = `Hi team,\n\nI would like to file a ${type} on ${start}${start !== end ? ' to '+end : ''} due to ${reason}. ${cover} agreed to cover for my shift. Thank you!`;
+                console.log("=== SIMULATED EMAIL PAYLOAD ===");
+                console.log("Subject:", emailSubject);
+                console.log("Body:\n" + emailBody);
+                alert(`Simulated Email Sent!\n\nSubject: ${emailSubject}\n\n${emailBody}`);
+
+                document.getElementById('form-file-leave').reset();
+                loadLeaveData();
+                document.querySelector('[data-tab="my-leaves"]').click();
+
+            } catch(e) { console.error(e); showToast("Failed to file leave", "error"); }
+        };
+
+        async function loadLeaveData() {
+            try {
+                // My Leaves
+                const myReqs = await executeSql("SELECT * FROM leaves WHERE email = ? ORDER BY id DESC", [{type: "text", value: AppState.user.email}]);
+                const tbody = document.getElementById('my-leaves-tbody');
+                tbody.innerHTML = '';
+                const today = new Date().toISOString().split('T')[0];
+
+                myReqs.forEach(req => {
+                    let actionBtn = '';
+                    if (req.status === 'Pending' || (req.status === 'Approved' && req.start_date >= today)) {
+                        actionBtn = `<button onclick="cancelLeave(${req.id}, '${req.status}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">Cancel</button>`;
+                    }
+                    let statusColor = req.status === 'Approved' ? 'text-green-600' : (req.status === 'Pending' ? 'text-orange-500' : 'text-gray-500');
+                    if(req.status.includes('Canceled')) statusColor = 'text-red-500';
+
+                    tbody.innerHTML += `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="p-3 text-gray-500 text-xs">${new Date(req.created_at).toLocaleString()}</td>
+                            <td class="p-3 font-medium">${req.type}</td>
+                            <td class="p-3">${req.start_date} ${req.start_date !== req.end_date ? 'to '+req.end_date : ''}</td>
+                            <td class="p-3">${req.days}</td>
+                            <td class="p-3 font-medium ${statusColor}">${req.status}</td>
+                            <td class="p-3">${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+
+                // Admin Pending
+                if(AppState.user.role === 'Admin') {
+                    const pending = await executeSql("SELECT * FROM leaves WHERE status = 'Pending' ORDER BY id ASC");
+                    const pBody = document.getElementById('pending-leaves-tbody');
+                    pBody.innerHTML = '';
+                    pending.forEach(req => {
+                        pBody.innerHTML += `
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="p-3 text-xs">${req.email}</td>
+                                <td class="p-3 font-medium text-xs">${req.type}</td>
+                                <td class="p-3 text-xs">${req.start_date} ${req.start_date !== req.end_date ? 'to '+req.end_date : ''}</td>
+                                <td class="p-3 text-xs">${req.days}</td>
+                                <td class="p-3 text-xs">${req.cover}</td>
+                                <td class="p-3 text-center flex gap-1 justify-center">
+                                    <button onclick="adminActionLeave(${req.id}, 'Approved')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"><i data-lucide="check" class="w-3 h-3"></i></button>
+                                    <button onclick="adminActionLeave(${req.id}, 'Denied')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"><i data-lucide="x" class="w-3 h-3"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        window.cancelLeave = async (id, currentStatus) => {
+            if(!confirm("Are you sure you want to cancel this leave?")) return;
+            try {
+                const reqs = await executeSql("SELECT * FROM leaves WHERE id = ?", [{type: "integer", value: id}]);
+                if(reqs.length === 0) return;
+                const req = reqs[0];
+
+                const newStatus = currentStatus === 'Approved' ? 'Approved to Canceled' : 'Canceled';
+                await executeSql("UPDATE leaves SET status = ? WHERE id = ?", [{type: "text", value: newStatus}, {type: "integer", value: id}]);
+
+                // Refund balances
+                let balField = '';
+                if(req.type === 'Sick Leave') balField = 'sl';
+                if(req.type === 'Family Care Leave') balField = 'fcl';
+                
+                if(req.type.includes('Vacation Leave') || (req.type === 'Emergency Leave' && req.deducted_carry + req.deducted_current > 0)) {
+                   await executeSql("UPDATE leave_balances SET vl_carry = vl_carry + ?, vl_current = vl_current + ? WHERE email = ?", 
+                        [{type: "real", value: req.deducted_carry}, {type: "real", value: req.deducted_current}, {type: "text", value: req.email}]);
+                } else if (balField) {
+                    await executeSql(`UPDATE leave_balances SET ${balField} = ${balField} + ? WHERE email = ?`, 
+                        [{type: "real", value: req.days}, {type: "text", value: req.email}]);
+                }
+
+                showToast("Leave canceled and credits refunded", "success");
+                loadLeaveData();
+            } catch(e) { console.error(e); }
+        };
+
+        window.adminActionLeave = async (id, action) => {
+            try {
+                await executeSql("UPDATE leaves SET status = ? WHERE id = ?", [{type: "text", value: action}, {type: "integer", value: id}]);
+                
+                if (action === 'Denied') {
+                    // Refund if denied
+                    const reqs = await executeSql("SELECT * FROM leaves WHERE id = ?", [{type: "integer", value: id}]);
+                    const req = reqs[0];
+                    if(req.type.includes('Vacation') || req.type === 'Emergency Leave') {
+                        await executeSql("UPDATE leave_balances SET vl_carry = vl_carry + ?, vl_current = vl_current + ? WHERE email = ?", 
+                            [{type: "real", value: req.deducted_carry}, {type: "real", value: req.deducted_current}, {type: "text", value: req.email}]);
+                    } else if (req.type === 'Sick Leave') {
+                        await executeSql(`UPDATE leave_balances SET sl = sl + ? WHERE email = ?`, [{type: "real", value: req.days}, {type: "text", value: req.email}]);
+                    } else if (req.type === 'Family Care Leave') {
+                        await executeSql(`UPDATE leave_balances SET fcl = fcl + ? WHERE email = ?`, [{type: "real", value: req.days}, {type: "text", value: req.email}]);
+                    }
+                }
+                
+                showToast(`Leave ${action}`, "success");
+                loadLeaveData();
+            } catch(e) { console.error(e); }
+        };
+
+        async function fetchMyBalances() {
+            try {
+                const bal = await executeSql("SELECT * FROM leave_balances WHERE email = ?", [{type: "text", value: AppState.user.email}]);
+                if(bal.length > 0) {
+                    const b = bal[0];
+                    document.getElementById('bal-vl').textContent = b.vl_current;
+                    document.getElementById('bal-vl-carry').textContent = b.vl_carry;
+                    document.getElementById('bal-sl').textContent = b.sl;
+                    document.getElementById('bal-fcl').textContent = b.fcl;
+                }
+            } catch(e) {}
+        }
+
+        /* --- STREAMING_CHUNK:RTA Schedule Core --- */
+        
+        // PH Holidays Data (Static for 2026 based on prompt instructions)
+        const HOLIDAYS = {
+            "2026-01-01": { name: "New Year's Day", type: "Legal" },
+            "2026-04-09": { name: "Araw ng Kagitingan", type: "Legal" },
+            "2026-04-02": { name: "Maundy Thursday", type: "Legal" },
+            "2026-04-03": { name: "Good Friday", type: "Legal" },
+            "2026-05-01": { name: "Labor Day", type: "Legal" },
+            "2026-06-12": { name: "Independence Day", type: "Legal" },
+            "2026-08-31": { name: "National Heroes Day", type: "Legal" },
+            "2026-11-30": { name: "Bonifacio Day", type: "Legal" },
+            "2026-12-25": { name: "Christmas Day", type: "Legal" },
+            "2026-12-30": { name: "Rizal Day", type: "Legal" },
+            "2026-02-25": { name: "EDSA Revolution", type: "Special" },
+            "2026-08-21": { name: "Ninoy Aquino Day", type: "Special" },
+            "2026-11-01": { name: "All Saints' Day", type: "Special" },
+            "2026-11-02": { name: "All Souls' Day", type: "Special" },
+            "2026-12-08": { name: "Feast of Immaculate Conception", type: "Special" },
+            "2026-12-31": { name: "Last Day of the Year", type: "Special" }
+        };
+
+        function getWeekDates(startDate) {
+            let dates = [];
+            let curr = new Date(startDate);
+            // Adjust to Monday
+            let day = curr.getDay();
+            let diff = curr.getDate() - day + (day == 0 ? -6 : 1);
+            curr.setDate(diff);
+
+            for (let i = 0; i < 7; i++) {
+                dates.push(new Date(curr));
+                curr.setDate(curr.getDate() + 1);
+            }
+            return dates;
+        }
+
+        document.getElementById('btn-prev-week').onclick = () => { AppState.currentWeekStart.setDate(AppState.currentWeekStart.getDate() - 7); renderScheduleGrid(); };
+        document.getElementById('btn-next-week').onclick = () => { AppState.currentWeekStart.setDate(AppState.currentWeekStart.getDate() + 7); renderScheduleGrid(); };
+
+        async function renderScheduleGrid() {
+            if (AppState.users.length === 0) await loadRoster();
+            const dates = getWeekDates(AppState.currentWeekStart);
+            
+            document.getElementById('schedule-week-label').textContent = `${dates[0].toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${dates[6].toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}`;
+
+            // Build Header
+            const header = document.getElementById('schedule-header');
+            let hHTML = `<th class="p-2 border-r text-left min-w-[200px] bg-white sticky left-0 z-20 shadow-[1px_0_0_0_#e5e5e5]">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="selectAllRta" class="admin-only-section ${AppState.user.role !== 'Admin' ? 'hidden' : ''}"> <span class="font-semibold text-gray-600">RTA Name</span>
+                            </div>
+                        </th>`;
+            dates.forEach(d => {
+                const dateStr = d.toISOString().split('T')[0];
+                const holi = HOLIDAYS[dateStr];
+                let holiTag = holi ? `<div class="text-[10px] ${holi.type==='Legal'?'text-red-600':'text-orange-500'} font-bold truncate" title="${holi.name}">${holi.name}</div>` : '';
+                hHTML += `<th class="p-2 border-r min-w-[100px] ${holi ? 'bg-orange-50' : ''}">
+                            <div class="text-xs text-gray-500">${d.toLocaleDateString('en-US', {weekday:'short'})}</div>
+                            <div class="font-bold">${d.getDate()}</div>
+                            ${holiTag}
+                          </th>`;
+            });
+            header.innerHTML = hHTML;
+
+            // Fetch schedules for week
+            const startStr = dates[0].toISOString().split('T')[0];
+            const endStr = dates[6].toISOString().split('T')[0];
+            const scheds = await executeSql("SELECT * FROM schedules WHERE date >= ? AND date <= ?", [{type: "text", value: startStr}, {type: "text", value: endStr}]);
+            
+            // Fetch approved leaves
+            const approvedLeaves = await executeSql("SELECT email, start_date, end_date, type FROM leaves WHERE status = 'Approved'");
+
+            const tbody = document.getElementById('schedule-tbody');
+            tbody.innerHTML = '';
+            
+            // Only show RTAs
+            const rtas = AppState.users.filter(u => u.role === 'RTA');
+
+            rtas.forEach(rta => {
+                let rHTML = `<tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="p-2 border-r text-left bg-white sticky left-0 z-10 shadow-[1px_0_0_0_#e5e5e5]">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" class="rta-select admin-only-section ${AppState.user.role !== 'Admin' ? 'hidden' : ''}" value="${rta.email}">
+                                        <span class="text-sm font-medium truncate w-32" title="${rta.name}">${rta.name}</span>
+                                    </div>
+                                </td>`;
+                
+                dates.forEach(d => {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const s = scheds.find(x => x.email === rta.email && x.date === dateStr);
+                    
+                    // Check if on leave
+                    const isOnLeave = approvedLeaves.find(l => rta.email === l.email && dateStr >= l.start_date && dateStr <= l.end_date);
+
+                    let cellContent = '-';
+                    let cellClass = 'cursor-pointer hover:bg-gray-100 transition';
+                    let displayColor = 'text-gray-800';
+
+                    if (isOnLeave) {
+                        cellContent = `<span class="text-xs font-bold text-blue-600">ON LEAVE<br>(${isOnLeave.type.split(' ')[0]})</span>`;
+                        cellClass = 'bg-blue-50';
+                    } else if (s) {
+                        if (s.is_rd) {
+                            cellContent = `<span class="font-bold text-gray-400">RD</span>`;
+                        } else {
+                            cellContent = `${s.start_time} - ${s.end_time}`;
+                            if (s.type === 'override') {
+                                cellClass = 'bg-yellow-50'; // Override visual indicator
+                                displayColor = 'text-yellow-700 font-medium';
+                            }
+                        }
+                    }
+
+                    rHTML += `<td class="p-2 border-r text-sm ${cellClass} ${displayColor}" onclick="openOverrideModal('${rta.email}', '${dateStr}')">${cellContent}</td>`;
+                });
+                rHTML += `</tr>`;
+                tbody.innerHTML += rHTML;
+            });
+
+            // Re-bind select all
+            const selectAll = document.getElementById('selectAllRta');
+            if(selectAll) {
+                selectAll.onchange = (e) => {
+                    document.querySelectorAll('.rta-select').forEach(cb => cb.checked = e.target.checked);
+                };
+            }
+        }
+
+        // Bulk apply
+        document.getElementById('btn-apply-bulk-shift').onclick = async () => {
+            const shiftStr = document.getElementById('bulk-shift-string').value.trim();
+            const checkedBoxes = Array.from(document.querySelectorAll('.rta-select:checked'));
+            if (checkedBoxes.length === 0) return showToast("Select at least one RTA", "error");
+            if (!shiftStr || !shiftStr.includes('-')) return showToast("Invalid shift string format (e.g., 07:00-16:00)", "error");
+
+            const [start, end] = shiftStr.split('-');
+            const dates = getWeekDates(AppState.currentWeekStart);
+
+            try {
+                for (let cb of checkedBoxes) {
+                    for (let d of dates) {
+                        const dateStr = d.toISOString().split('T')[0];
+                        // Upsert logic
+                        await executeSql(`
+                            INSERT INTO schedules (email, date, start_time, end_time, is_rd, type) 
+                            VALUES (?, ?, ?, ?, 0, 'regular') 
+                            ON CONFLICT(email, date) DO UPDATE SET 
+                            start_time=excluded.start_time, end_time=excluded.end_time, is_rd=0, type='regular'
+                        `, [{type: "text", value: cb.value}, {type: "text", value: dateStr}, {type: "text", value: start}, {type: "text", value: end}]);
+                    }
+                }
+                showToast("Bulk schedule applied", "success");
+                renderScheduleGrid();
+            } catch(e) { console.error(e); showToast("Failed to apply schedule", "error"); }
+        };
+
+        // Modal Override logic
+        let currentOverride = {};
+        window.openOverrideModal = async (email, dateStr) => {
+            if (AppState.user.role !== 'Admin' && AppState.user.email !== email) return; // Only admin or self
+            
+            currentOverride = { email, date: dateStr };
+            document.getElementById('override-subtitle').textContent = `Editing shift for ${email} on ${dateStr}`;
+            
+            // fetch existing
+            try {
+                const existing = await executeSql("SELECT * FROM schedules WHERE email = ? AND date = ?", [{type:"text", value:email}, {type:"text", value:dateStr}]);
+                if (existing.length > 0) {
+                    const s = existing[0];
+                    document.getElementById('override-is-rd').checked = s.is_rd === 1;
+                    document.getElementById('override-start').value = s.start_time;
+                    document.getElementById('override-end').value = s.end_time;
+                    document.getElementById('override-reason').value = s.override_reason || 'Other';
+                } else {
+                    document.getElementById('override-is-rd').checked = false;
+                    document.getElementById('override-start').value = '';
+                    document.getElementById('override-end').value = '';
+                }
+            } catch(e){}
+
+            document.getElementById('override-modal').classList.remove('hidden');
+        };
+
+        document.getElementById('btn-cancel-override').onclick = () => document.getElementById('override-modal').classList.add('hidden');
+        
+        document.getElementById('override-is-rd').onchange = (e) => {
+            const inputs = document.getElementById('override-time-inputs');
+            if(e.target.checked) inputs.classList.add('opacity-50', 'pointer-events-none');
+            else inputs.classList.remove('opacity-50', 'pointer-events-none');
+        };
+
+        document.getElementById('btn-save-override').onclick = async () => {
+            const isRd = document.getElementById('override-is-rd').checked ? 1 : 0;
+            const start = document.getElementById('override-start').value;
+            const end = document.getElementById('override-end').value;
+            const reason = document.getElementById('override-reason').value;
+
+            if (!isRd && (!start || !end)) return showToast("Provide times for working day", "error");
+
+            try {
+                await executeSql(`
+                    INSERT INTO schedules (email, date, start_time, end_time, is_rd, override_reason, type) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'override') 
+                    ON CONFLICT(email, date) DO UPDATE SET 
+                    start_time=excluded.start_time, end_time=excluded.end_time, is_rd=excluded.is_rd, override_reason=excluded.override_reason, type='override'
+                `, [
+                    {type: "text", value: currentOverride.email}, {type: "text", value: currentOverride.date},
+                    {type: "text", value: start}, {type: "text", value: end}, {type: "integer", value: isRd}, {type: "text", value: reason}
+                ]);
+                showToast("Shift updated", "success");
+                document.getElementById('override-modal').classList.add('hidden');
+                renderScheduleGrid();
+            } catch(e) { console.error(e); }
+        };
+
+        /* --- STREAMING_CHUNK:OT Tracker Calculation Matrix --- */
+        
+        function calculateHoursDifference(start, end) {
+            let [sh, sm] = start.split(':').map(Number);
+            let [eh, em] = end.split(':').map(Number);
+            let dateS = new Date(2000, 0, 1, sh, sm);
+            let dateE = new Date(2000, 0, 1, eh, em);
+            if (dateE <= dateS) dateE.setDate(dateE.getDate() + 1); // Crosses midnight
+            return (dateE - dateS) / (1000 * 60 * 60);
+        }
+
+        // Night Differential Window: 22:00 to 06:00
+        function calculateND(start, end) {
+            let [sh, sm] = start.split(':').map(Number);
+            let [eh, em] = end.split(':').map(Number);
+            let dS = new Date(2000, 0, 1, sh, sm);
+            let dE = new Date(2000, 0, 1, eh, em);
+            if (dE <= dS) dE.setDate(dE.getDate() + 1);
+
+            let totalND = 0;
+            // ND windows for Day 1 and Day 2 (if crossing midnight)
+            const ndWindows = [
+                { start: new Date(2000, 0, 1, 0, 0), end: new Date(2000, 0, 1, 6, 0) },
+                { start: new Date(2000, 0, 1, 22, 0), end: new Date(2000, 0, 2, 6, 0) }
+            ];
+
+            // Sample every minute to see if it falls in ND window. (Simple brute force for accuracy)
+            let curr = new Date(dS);
+            while (curr < dE) {
+                for (let win of ndWindows) {
+                    if (curr >= win.start && curr < win.end) {
+                        totalND += 1;
+                        break;
+                    }
+                }
+                curr.setMinutes(curr.getMinutes() + 1);
+            }
+            return totalND / 60;
+        }
+
+        function computeDailyOTMatrix(sched, dateStr) {
+            let row = {
+                location: 'ON-SITE', email: sched.email, date: dateStr, reason: sched.override_reason || '', tardiness: 0,
+                regOT: 0, nd: 0, regOT_nd: 0,
+                rd_1st8: 0, rd_ex8: 0, rd_1st8_nd: 0, rd_ex8_nd: 0,
+                lh_1st8: 0, lh_ex8: 0, lh_1st8_nd: 0, lh_ex8_nd: 0,
+                lh_rd_1st8: 0, lh_rd_ex8: 0, lh_rd_1st8_nd: 0, lh_rd_ex8_nd: 0,
+                sh_1st8: 0, sh_ex8: 0, sh_1st8_nd: 0, sh_ex8_nd: 0,
+                sh_rd_1st8: 0, sh_rd_ex8: 0, sh_rd_1st8_nd: 0, sh_rd_ex8_nd: 0
+            };
+
+            if (sched.is_rd) return row; // No rendered hours if purely set as RD
+
+            const holi = HOLIDAYS[dateStr];
+            const isLegal = holi && holi.type === 'Legal';
+            const isSpecial = holi && holi.type === 'Special';
+            // Determine base intent: was it scheduled as RDOT?
+            const isRDOT = sched.override_reason === 'RDOT';
+
+            let totalHours = calculateHoursDifference(sched.start_time, sched.end_time);
+            
+            // Lunch deduction logic
+            let paidHours = totalHours;
+            if (isRDOT) {
+                if (totalHours >= 8) paidHours = totalHours - 1; // deduct lunch for full RD shift
+            } else {
+                paidHours = Math.max(0, totalHours - 1); // standard 9hr shift = 8hr paid
+            }
+
+            let ndHours = calculateND(sched.start_time, sched.end_time);
+            // Rough proportional distribution of ND for excess hours. 
+            // For a highly accurate payroll system, this requires minute-by-minute categorization.
+            // Using a simplified distribution for this matrix.
+            let ndRatio = totalHours > 0 ? (ndHours / totalHours) : 0;
+
+            let first8 = Math.min(8, paidHours);
+            let ex8 = Math.max(0, paidHours - 8);
+            
+            let first8ND = first8 * ndRatio;
+            let ex8ND = ex8 * ndRatio;
+
+            // Matrix routing
+            if (isLegal && isRDOT) {
+                row.lh_rd_1st8 = first8; row.lh_rd_ex8 = ex8;
+                row.lh_rd_1st8_nd = first8ND; row.lh_rd_ex8_nd = ex8ND;
+            } else if (isLegal) {
+                row.lh_1st8 = first8; row.lh_ex8 = ex8;
+                row.lh_1st8_nd = first8ND; row.lh_ex8_nd = ex8ND;
+            } else if (isSpecial && isRDOT) {
+                row.sh_rd_1st8 = first8; row.sh_rd_ex8 = ex8;
+                row.sh_rd_1st8_nd = first8ND; row.sh_rd_ex8_nd = ex8ND;
+            } else if (isSpecial) {
+                row.sh_1st8 = first8; row.sh_ex8 = ex8;
+                row.sh_1st8_nd = first8ND; row.sh_ex8_nd = ex8ND;
+            } else if (isRDOT) {
+                row.rd_1st8 = first8; row.rd_ex8 = ex8;
+                row.rd_1st8_nd = first8ND; row.rd_ex8_nd = ex8ND;
+            } else {
+                // Regular Working Day
+                row.nd = ndHours; // Base ND
+                row.regOT = ex8;
+                row.regOT_nd = ex8ND;
+            }
+
+            // Rounding utility
+            for (let k in row) {
+                if (typeof row[k] === 'number') row[k] = parseFloat(row[k].toFixed(2));
+            }
+
+            return row;
+        }
+
+        let currentOtData = []; // Store for export
+
+        document.getElementById('btn-generate-ot').onclick = async () => {
+            const start = document.getElementById('ot-cutoff-start').value;
+            const end = document.getElementById('ot-cutoff-end').value;
+            if (!start || !end) return showToast("Select cut-off date range", "error");
+
+            try {
+                const scheds = await executeSql("SELECT * FROM schedules WHERE date >= ? AND date <= ? AND is_rd = 0", [{type: "text", value: start}, {type: "text", value: end}]);
+                
+                const tbody = document.getElementById('ot-tbody');
+                tbody.innerHTML = '';
+                currentOtData = [];
+
+                if(scheds.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No data found in range.</td></tr>';
+                    return;
+                }
+
+                scheds.forEach(s => {
+                    const rowData = computeDailyOTMatrix(s, s.date);
+                    currentOtData.push(rowData);
+                    
+                    tbody.innerHTML += `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="p-2 border">${rowData.location}</td>
+                            <td class="p-2 border font-medium">${rowData.email}</td>
+                            <td class="p-2 border">${rowData.date}</td>
+                            <td class="p-2 border text-orange-600">${rowData.regOT || '-'}</td>
+                            <td class="p-2 border text-blue-600">${rowData.nd || '-'}</td>
+                            <td class="p-2 border">${rowData.regOT_nd || '-'}</td>
+                            <td class="p-2 border text-green-600">${rowData.rd_1st8 || '-'}</td>
+                            <td class="p-2 border text-green-600">${rowData.rd_ex8 || '-'}</td>
+                            <td class="p-2 border text-red-600">${rowData.lh_1st8 || '-'}</td>
+                            <td class="p-2 border text-gray-400 italic text-xs">... more ...</td>
+                        </tr>
+                    `;
+                });
+
+            } catch(e) { console.error(e); }
+        };
+
+        // Export using SheetJS
+        document.getElementById('btn-export-ot').onclick = () => {
+            if(currentOtData.length === 0) return showToast("No data to export", "error");
+            
+            // Map keys to exact requested columns
+            const excelData = currentOtData.map(r => ({
+                "Location": r.location,
+                "Shopee Email Address": r.email,
+                "Date of Rendered Overtime": r.date,
+                "Date of OT Approval": "", // Admin manual fill in Excel
+                "Reason of Overtime": r.reason,
+                "Tardiness (in minutes)": r.tardiness,
+                "Regular Overtime": r.regOT,
+                "ND": r.nd,
+                "Regular Overtime w/ ND": r.regOT_nd,
+                "Rest Day (1st 8 hrs)": r.rd_1st8,
+                "Rest Day (In excess of 8 hrs)": r.rd_ex8,
+                "Rest Day (1st 8 hrs w/ ND)": r.rd_1st8_nd,
+                "Rest Day (In excess of 8 hrs w/ ND)": r.rd_ex8_nd,
+                "Legal Holiday (1st 8 hrs)": r.lh_1st8,
+                "Legal Holiday (In excess of 8 hrs)": r.lh_ex8,
+                "Legal Holiday (1st 8 hrs w/ ND)": r.lh_1st8_nd,
+                "Legal Holiday (In excess of 8 hrs w/ ND)": r.lh_ex8_nd,
+                "Legal Holiday on a Rest Day (1st 8 hrs)": r.lh_rd_1st8,
+                "Legal Holiday on a Rest Day (In excess of 8 hrs)": r.lh_rd_ex8,
+                "Legal Holiday on a Rest Day (1st 8 hrs w/ ND)": r.lh_rd_1st8_nd,
+                "Legal Holiday on a Rest Day (In excess of 8 hrs w/ ND)": r.lh_rd_ex8_nd,
+                "Special Holiday (1st 8 hrs)": r.sh_1st8,
+                "Special Holiday (In excess of 8 hrs)": r.sh_ex8,
+                "Special Holiday (1st 8 hrs w/ ND)": r.sh_1st8_nd,
+                "Special Holiday (In excess of 8 hrs w/ ND)": r.sh_ex8_nd,
+                "Special Holiday on a Rest Day (1st 8 hrs)": r.sh_rd_1st8,
+                "Special Holiday on a Rest Day (In excess of 8 hrs)": r.sh_rd_ex8,
+                "Special Holiday on a Rest Day (1st 8 hrs w/ ND)": r.sh_rd_1st8_nd,
+                "Special Holiday on a Rest Day (In excess of 8 hrs w/ ND)": r.sh_rd_ex8_nd
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "OT_Tracker");
+            XLSX.writeFile(wb, `Shopee_OT_Tracker_${new Date().getTime()}.xlsx`);
+        };
+
+        // Admin Settings Logic
+        document.getElementById('btn-update-pin').onclick = async () => {
+            const oldPin = document.getElementById('admin-old-pin').value;
+            const newPin = document.getElementById('admin-new-pin').value;
+            if(newPin.length !== 4) return showToast("New PIN must be 4 digits", "error");
+
+            try {
+                const res = await executeSql("SELECT value FROM settings WHERE key = 'admin_pin'");
+                if(res[0].value === oldPin) {
+                    await executeSql("UPDATE settings SET value = ? WHERE key = 'admin_pin'", [{type: "text", value: newPin}]);
+                    showToast("PIN Updated successfully", "success");
+                    document.getElementById('admin-old-pin').value = '';
+                    document.getElementById('admin-new-pin').value = '';
+                } else {
+                    showToast("Old PIN incorrect", "error");
+                }
+            } catch(e) {}
+        };
+
+        document.getElementById('btn-reset-db').onclick = async () => {
+            if(prompt("Type 'RESET' to wipe database (cannot be undone)") === 'RESET') {
+                try {
+                    await executeSql("DROP TABLE IF EXISTS users");
+                    await executeSql("DROP TABLE IF EXISTS announcements");
+                    await executeSql("DROP TABLE IF EXISTS leaves");
+                    await executeSql("DROP TABLE IF EXISTS leave_balances");
+                    await executeSql("DROP TABLE IF EXISTS schedules");
+                    await executeSql("DROP TABLE IF EXISTS settings");
+                    alert("Database reset. Reloading app...");
+                    window.location.reload();
+                } catch(e) { console.error(e); }
+            }
+        };
+
+        /* --- STREAMING_CHUNK:Application Bootstrap --- */
+        window.onload = async () => {
+            try {
+                await initDatabase();
+                console.log("Database initialized successfully.");
+            } catch (e) {
+                console.error("Failed to connect/initialize DB.", e);
+                showToast("Database connection error.", "error");
+            }
+        };
+
+    </script>
+</body>
+</html>
